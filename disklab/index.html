@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DiskLab — Interactive Disk Scheduling Experience (FCFS & SSTF)</title>
+  <meta name="description" content="An Apple-inspired interactive educational website exploring Operating Systems disk scheduling algorithms: First Come, First Served (FCFS) and Shortest Seek Time First (SSTF).">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="disklab-app">
+  <!-- Minimalist Sticky Navigation -->
+  <header class="site-header" role="banner">
+    <div class="nav-container">
+      <a href="#hero" class="brand-logo" aria-label="DiskLab Home">
+        <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"></circle>
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M12 2a10 10 0 0 1 10 10"></path>
+        </svg>
+        <span class="brand-name">DiskLab</span>
+      </a>
+      <nav class="site-nav" role="navigation" aria-label="Primary Navigation">
+        <ul class="nav-links">
+          <li><a href="#problem-context">Concepts</a></li>
+          <li><a href="#algorithms-section">Algorithms</a></li>
+          <li><a href="#simulation-lab" class="nav-highlight">Simulation Lab</a></li>
+          <li><a href="#comparison-matrix">Comparison</a></li>
+          <li><a href="#system-architecture">Architecture</a></li>
+        </ul>
+      </nav>
+      <div class="nav-action">
+        <a href="#simulation-lab" class="button button-nav">Launch Simulator</a>
+      </div>
+    </div>
+  </header>
+
+  <main id="main-content">
+    <!-- SECTION A: Cinematic Opening -->
+    <section id="hero" class="hero-section" aria-labelledby="hero-title">
+      <div class="section-container">
+        <div class="hero-editorial-panel">
+          <div class="hero-backdrop-glow" aria-hidden="true"></div>
+          <div class="hero-layout">
+            <div class="hero-content">
+              <div class="editorial-badge">OS ARCHITECTURE / DISK SCHEDULING</div>
+              <h1 id="hero-title" class="hero-headline">Every movement has a cost.</h1>
+              <p class="hero-subhead">
+                Your disk receives requests. Your operating system decides what happens next.
+              </p>
+              <p class="hero-description">
+                Explore the mechanical reality of disk scheduling. Observe how the choice between First Come, First Served (FCFS) and Shortest Seek Time First (SSTF) shapes head traversal, latency, and hardware efficiency.
+              </p>
+              <div class="hero-actions">
+                <a href="#simulation-lab" class="button button-primary" title="Run a simulation">Launch the simulation</a>
+                <a href="#algorithms-section" class="button button-secondary">Explore the algorithms</a>
+              </div>
+              <div class="hero-specs-block" role="group" aria-label="Benchmark Configuration Specs">
+                <div class="spec-item">
+                  <span class="spec-label">Benchmark Queue</span>
+                  <span class="spec-val">98, 183, 37, 122, 14, 124, 65, 67</span>
+                </div>
+                <div class="spec-item">
+                  <span class="spec-label">Initial Head</span>
+                  <span class="spec-val">53</span>
+                </div>
+                <div class="spec-item">
+                  <span class="spec-label">Total Cylinders</span>
+                  <span class="spec-val">200 (0–199)</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="hero-visual" aria-hidden="true">
+              <!-- Dimensional Hero Platter Showcase -->
+              <div class="hero-platter-disc" id="heroPlatter">
+                <div class="hero-platter-shine"></div>
+                <div class="hero-platter-rings">
+                  <div class="ring ring-1"></div>
+                  <div class="ring ring-2"></div>
+                  <div class="ring ring-3"></div>
+                </div>
+                <div class="hero-platter-hub">
+                  <div class="hub-clamp"></div>
+                  <div class="hub-spindle"></div>
+                </div>
+                <div class="hero-actuator-arm">
+                  <div class="arm-beam"></div>
+                  <div class="arm-head-lens"></div>
+                </div>
+              </div>
+              <div class="hero-caption">
+                <span>Rotational latency & seek traversal model</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION B: Explain the Problem Visually -->
+    <section id="problem-context" class="problem-section" aria-labelledby="problem-title">
+      <div class="section-container">
+        <div class="editorial-composition-panel">
+          <div class="section-header text-center">
+            <span class="section-eyebrow">The Core Problem</span>
+            <h2 id="problem-title" class="section-title">The requests don't arrive in a convenient order.</h2>
+            <p class="section-lead">
+              Processes running on your computer issue read and write requests to storage asynchronously. When files are fragmented across non-adjacent cylinders, naive scheduling forces the mechanical head to swing wildly across the platter.
+            </p>
+          </div>
+
+          <!-- Physical Reality: Visual Breakdown of Seek Time, Rotational Latency, and Transfer Time -->
+          <div class="latency-breakdown-grid" role="region" aria-label="Components of Disk Latency">
+            <div class="latency-card dominant">
+              <div class="latency-tag">Dominant Mechanical Delay (~3–10 ms)</div>
+              <h3 class="latency-title">1. Seek Time</h3>
+              <p class="latency-desc">
+                Radial traversal of the actuator arm across concentric tracks. The read/write head must <strong>physically accelerate, traverse cylinders, decelerate, and settle</strong> on the target track. This physical travel dominates overall I/O latency.
+              </p>
+            </div>
+            <div class="latency-card">
+              <div class="latency-tag">Rotational Wait (~2–4 ms)</div>
+              <h3 class="latency-title">2. Rotational Latency</h3>
+              <p class="latency-desc">
+                Waiting for the spinning platter to rotate the target sector beneath the sensor head (~4.17 ms average at 7,200 RPM; ~3.0 ms at 10,000 RPM).
+              </p>
+            </div>
+            <div class="latency-card">
+              <div class="latency-tag">Electronic Reading (&lt;0.1 ms)</div>
+              <h3 class="latency-title">3. Transfer Time</h3>
+              <p class="latency-desc">
+                High-speed electromagnetic reading and transmission of bits into drive buffer cache as sectors sweep past the head sensor.
+              </p>
+            </div>
+          </div>
+
+        <!-- Interactive Problem Demonstration Widget -->
+        <div class="demo-interactive-card" role="region" aria-label="Unordered Access Demo">
+          <div class="demo-header">
+            <div>
+              <span class="demo-tag">Visual Demonstration</span>
+              <h3 class="demo-heading">Mechanical Seek Accumulation</h3>
+            </div>
+            <button id="btnDemoRun" class="button button-sm button-secondary" type="button">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+              <span>Simulate Unordered Access</span>
+            </button>
+          </div>
+
+          <!-- Linear Cylinder Track Visualization -->
+          <div class="track-demo-container">
+            <div class="track-ruler-labels">
+              <span>Cylinder 0</span>
+              <span>Cylinder 50</span>
+              <span>Cylinder 100</span>
+              <span>Cylinder 150</span>
+              <span>Cylinder 199</span>
+            </div>
+            <div class="track-bar" id="demoTrackBar">
+              <div class="track-fill-line" id="demoSeekTrail"></div>
+              <div class="track-pin track-pin-head" id="demoHeadPin" style="left: 26.5%;" title="Initial Head at Cylinder 53">
+                <span class="pin-badge">Head: 53</span>
+              </div>
+              <div class="track-pin track-pin-req" style="left: 49%;" title="Request at 98"><span class="pin-dot"></span><span class="pin-label">98</span></div>
+              <div class="track-pin track-pin-req" style="left: 91.5%;" title="Request at 183"><span class="pin-dot"></span><span class="pin-label">183</span></div>
+              <div class="track-pin track-pin-req" style="left: 18.5%;" title="Request at 37"><span class="pin-dot"></span><span class="pin-label">37</span></div>
+              <div class="track-pin track-pin-req" style="left: 7%;" title="Request at 14"><span class="pin-dot"></span><span class="pin-label">14</span></div>
+            </div>
+            <div class="demo-metric-bar">
+              <div class="metric-item">
+                <span class="m-label">Current Head:</span>
+                <span class="m-val" id="demoHeadPos">53</span>
+              </div>
+              <div class="metric-item">
+                <span class="m-label">Seek Distance Accumulated:</span>
+                <span class="m-val text-accent" id="demoDistanceCounter">0 cylinders</span>
+              </div>
+              <div class="metric-item">
+                <span class="m-label">Mechanical Consequence:</span>
+                <span class="m-val text-muted" id="demoStatusText">Waiting to start</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Five Core Concepts Interactive Cards -->
+        <div class="concepts-grid">
+          <article class="concept-card" tabindex="0">
+            <div class="concept-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"></circle>
+                <circle cx="12" cy="12" r="6"></circle>
+                <circle cx="12" cy="12" r="2"></circle>
+              </svg>
+            </div>
+            <h4 class="concept-title">Disk Cylinders</h4>
+            <p class="concept-desc">
+              Concentric circular tracks numbered from <code>0</code> (innermost) to <code>diskSize - 1</code> (outermost). Moving between tracks requires physical radial movement of the read/write head assembly.
+            </p>
+          </article>
+
+          <article class="concept-card" tabindex="0">
+            <div class="concept-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+              </svg>
+            </div>
+            <h4 class="concept-title">Initial Head Position</h4>
+            <p class="concept-desc">
+              The cylinder where the disk actuator arm currently rests when scheduling decisions begin. Every pending request's seek distance is measured relative to the active head position.
+            </p>
+          </article>
+
+          <article class="concept-card" tabindex="0">
+            <div class="concept-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="8" y1="6" x2="21" y2="6"></line>
+                <line x1="8" y1="12" x2="21" y2="12"></line>
+                <line x1="8" y1="18" x2="21" y2="18"></line>
+                <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                <line x1="3" y1="18" x2="3.01" y2="18"></line>
+              </svg>
+            </div>
+            <h4 class="concept-title">Request Queue</h4>
+            <p class="concept-desc">
+              An ordered FIFO buffer of pending block requests waiting for disk I/O. Arriving from different processes, the queue positions rarely align with sequential disk cylinders.
+            </p>
+          </article>
+
+          <article class="concept-card" tabindex="0">
+            <div class="concept-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="13 17 18 12 13 7"></polyline>
+                <polyline points="6 17 11 12 6 7"></polyline>
+              </svg>
+            </div>
+            <h4 class="concept-title">Disk-Head Movement</h4>
+            <p class="concept-desc">
+              The traversal distance in cylinders: \(|\text{target} - \text{current}|\). Because mechanical seek time dominates I/O delay, minimizing cumulative head travel directly improves total disk throughput.
+            </p>
+          </article>
+
+          <article class="concept-card" tabindex="0">
+            <div class="concept-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+              </svg>
+            </div>
+            <h4 class="concept-title">Scheduling Algorithm</h4>
+            <p class="concept-desc">
+              The operating system policy governing the service sequence of pending requests. The algorithm balances fairness, implementation complexity, and mechanical seek minimization.
+            </p>
+          </article>
+        </div>
+
+        <!-- Technical Nuance: Model Clarification & Physical Metaphor -->
+        <aside class="notice-card" role="note">
+          <div class="notice-icon">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="16" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+          </div>
+          <div class="notice-body">
+            <h5 class="notice-title">Logical Model vs. Physical Architecture</h5>
+            <p>
+              <strong>CD Platter Metaphor:</strong> The central circular platter is an intuitive visual metaphor. In real computer hardware, Hard Disk Drives (HDDs) employ multiple double-sided magnetic platters spinning on a shared spindle, while Compact Discs (CDs) are single-track spiral optical media read by semiconductor lasers.
+            </p>
+            <p>
+              <strong>Logical Cylinder Mapping:</strong> In operating system theory and this simulator, cylinder indices represent a 1D logical address space mapped to concentric tracks. Real enterprise disks also account for rotational latency, sector layout, and internal drive-controller remapping.
+            </p>
+          </div>
+        </aside>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION C: Meet the Algorithms -->
+    <section id="algorithms-section" class="algorithms-showcase" aria-labelledby="alg-showcase-title">
+      <div class="section-container">
+        <div class="section-header text-center">
+          <span class="section-eyebrow">The Scheduling Policies</span>
+          <h2 id="alg-showcase-title" class="section-title">Two philosophies. Radically different paths.</h2>
+          <p class="section-lead">
+            Compare the foundational First Come, First Served approach against the proximity-driven Shortest Seek Time First heuristic.
+          </p>
+        </div>
+
+        <div class="algorithm-cards-grid">
+          <!-- FCFS Editorial Card -->
+          <article class="algorithm-editorial-card fcfs-card" aria-labelledby="fcfs-headline">
+            <div class="card-header-tag">FIFO Principle</div>
+            <h3 id="fcfs-headline" class="card-headline">First in. First served.</h3>
+            <p class="card-summary">
+              First Come, First Served (FCFS) processes incoming disk requests in the exact order they arrive in the I/O queue.
+            </p>
+            <div class="card-details">
+              <div class="detail-block">
+                <span class="detail-label">Core Virtue</span>
+                <span class="detail-value text-success">Strict Fairness</span>
+                <p class="detail-text">Every request is guaranteed to be serviced in arrival order. Starvation is impossible because no request is ever postponed in favor of a closer neighbor.</p>
+              </div>
+              <div class="detail-block">
+                <span class="detail-label">The Mechanical Cost</span>
+                <span class="detail-value text-danger">Severe Arm Thrashing</span>
+                <p class="detail-text">If requests alternate between inner and outer tracks, the disk head repeatedly traverses the entire platter radius, wasting time and increasing mechanical wear.</p>
+              </div>
+            </div>
+
+            <div class="algorithm-decision-box">
+              <span class="box-title">Order of Execution:</span>
+              <div class="queue-chips-preview">
+                <span class="chip-item">53 (Start)</span>
+                <span class="chip-arrow">&rarr;</span>
+                <span class="chip-item">98</span>
+                <span class="chip-arrow">&rarr;</span>
+                <span class="chip-item">183</span>
+                <span class="chip-arrow">&rarr;</span>
+                <span class="chip-item">37</span>
+                <span class="chip-arrow">&rarr;</span>
+                <span class="chip-item">...</span>
+              </div>
+            </div>
+          </article>
+
+          <!-- SSTF Editorial Card -->
+          <article class="algorithm-editorial-card sstf-card" aria-labelledby="sstf-headline">
+            <div class="card-header-tag">Proximity Principle</div>
+            <h3 id="sstf-headline" class="card-headline">The nearest request gets served next.</h3>
+            <p class="card-summary">
+              Shortest Seek Time First (SSTF) repeatedly chooses the pending request with the minimum absolute distance from the current head position.
+            </p>
+            <div class="card-details">
+              <div class="detail-block">
+                <span class="detail-label">Core Virtue</span>
+                <span class="detail-value text-accent">Seek Minimization</span>
+                <p class="detail-text">By greedily servicing proximate cylinders first, SSTF drastically cuts total mechanical seek distance and boosts overall I/O throughput.</p>
+              </div>
+              <div class="detail-block">
+                <span class="detail-label">The Inherent Risk</span>
+                <span class="detail-value text-warning">Starvation Vulnerability</span>
+                <p class="detail-text">Requests located on distant tracks may wait indefinitely if a steady stream of new requests keeps arriving near the current head position.</p>
+              </div>
+            </div>
+
+            <!-- Interactive Decision Walkthrough -->
+            <div class="algorithm-decision-box" id="sstfDecisionInteractive">
+              <div class="box-title-bar">
+                <span class="box-title">How the algorithm decides:</span>
+                <span class="badge-step" id="decisionStepIndicator">Head at 53</span>
+              </div>
+              <div class="decision-candidates-list" id="decisionCandidatesList">
+                <div class="candidate-row winner">
+                  <span class="cand-cyl">Cylinder 65</span>
+                  <span class="cand-dist">|65 - 53| = 12 cyl</span>
+                  <span class="cand-badge">Closest &bull; Selected</span>
+                </div>
+                <div class="candidate-row">
+                  <span class="cand-cyl">Cylinder 67</span>
+                  <span class="cand-dist">|67 - 53| = 14 cyl</span>
+                  <span class="cand-badge text-muted">Next closest</span>
+                </div>
+                <div class="candidate-row">
+                  <span class="cand-cyl">Cylinder 37</span>
+                  <span class="cand-dist">|37 - 53| = 16 cyl</span>
+                  <span class="cand-badge text-muted">Distant</span>
+                </div>
+              </div>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION D: The Interactive Simulation Lab -->
+    <section id="simulation-lab" class="simulation-section" aria-labelledby="lab-title">
+      <div class="section-container">
+        <div class="section-header">
+          <div class="header-left">
+            <span class="section-eyebrow">Interactive Workbench</span>
+            <h2 id="lab-title" class="section-title">The Simulation Lab</h2>
+            <p class="section-lead">
+              Configure disk dimensions, initial head coordinates, and custom I/O queues. Scrub through synchronized animations and inspect mechanical metrics in real time.
+            </p>
+          </div>
+          <div class="header-right">
+            <!-- Preset Scenarios Dropdown -->
+            <div class="preset-selector-group">
+              <label for="scenarioPresets" class="preset-label">Load Preset Scenario:</label>
+              <select id="scenarioPresets" class="form-select">
+                <option value="default">Default Benchmark (Standard OS Test)</option>
+                <option value="high_dispersion">High Dispersion (Severe Seek Thrash)</option>
+                <option value="locality_clusters">Clustered Locality (SSTF High Win)</option>
+                <option value="starvation_danger">Starvation Risk (Peripheral Outlier)</option>
+                <option value="sequential">Near-Sequential Access</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2-Column Responsive Product Configurator Layout -->
+        <div class="lab-workspace-grid">
+          <!-- Left Column: Configurator Form & Live Controls -->
+          <div class="lab-controls-panel">
+            <div class="panel-card configurator-card">
+              <h3 class="panel-card-title">Disk & Queue Parameters</h3>
+
+              <form id="simulationForm" novalidate>
+                <!-- Disk Size Field -->
+                <div class="form-field">
+                  <div class="label-row">
+                    <label for="inputDiskSize" class="field-label">Disk Size (Cylinders)</label>
+                    <span class="field-hint" id="diskSizeHint">Range: [0, 199]</span>
+                  </div>
+                  <input type="number" id="inputDiskSize" class="form-input" value="200" min="1" max="10000" step="1" required aria-describedby="diskSizeHint errDiskSize">
+                  <div class="form-error-msg" id="errDiskSize" role="alert" aria-live="polite"></div>
+                </div>
+
+                <!-- Initial Head Position Field -->
+                <div class="form-field">
+                  <div class="label-row">
+                    <label for="inputInitialHead" class="field-label">Initial Head Position</label>
+                    <span class="field-hint">Starting cylinder</span>
+                  </div>
+                  <input type="number" id="inputInitialHead" class="form-input" value="53" min="0" max="199" step="1" required aria-describedby="errInitialHead">
+                  <div class="form-error-msg" id="errInitialHead" role="alert" aria-live="polite"></div>
+                </div>
+
+                <!-- Request Queue Field -->
+                <div class="form-field">
+                  <div class="label-row">
+                    <label for="inputQueue" class="field-label">Request Queue</label>
+                    <span class="field-hint">Comma-separated cylinders</span>
+                  </div>
+                  <textarea id="inputQueue" class="form-textarea" rows="3" required aria-describedby="errQueue">98, 183, 37, 122, 14, 124, 65, 67</textarea>
+                  <div class="form-error-msg" id="errQueue" role="alert" aria-live="polite"></div>
+                </div>
+
+                <!-- Algorithm Selection Segmented Control -->
+                <div class="form-field">
+                  <label class="field-label">Scheduling Mode</label>
+                  <div class="segmented-control" role="radiogroup" aria-label="Algorithm Selection">
+                    <button type="button" class="segment-btn active" data-mode="compare" role="radio" aria-checked="true">
+                      Compare Both
+                    </button>
+                    <button type="button" class="segment-btn" data-mode="FCFS" role="radio" aria-checked="false">
+                      FCFS
+                    </button>
+                    <button type="button" class="segment-btn" data-mode="SSTF" role="radio" aria-checked="false">
+                      SSTF
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Form Action Buttons -->
+                <div class="form-actions-row">
+                  <button type="submit" id="btnRunSim" class="button button-primary button-block">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                    <span>Run Simulation</span>
+                  </button>
+                  <button type="button" id="btnResetDefault" class="button button-secondary">
+                    Reset
+                  </button>
+                </div>
+
+                <!-- Informational Edge-Case Notices -->
+                <div class="form-warnings" id="formWarnings" role="status" aria-live="polite"></div>
+              </form>
+            </div>
+
+            <!-- Step Inspector Details Card -->
+            <div class="panel-card inspector-card" id="stepInspectorCard">
+              <div class="inspector-header">
+                <span class="inspector-tag">Step Inspector</span>
+                <span class="inspector-step-badge" id="inspStepNumber">Step 0 of 8</span>
+              </div>
+              <div class="inspector-body">
+                <div class="insp-stat-grid">
+                  <div class="insp-stat">
+                    <span class="insp-label">Traversing From</span>
+                    <span class="insp-value" id="inspFromCyl">Cylinder 53</span>
+                  </div>
+                  <div class="insp-stat">
+                    <span class="insp-label">Target Cylinder</span>
+                    <span class="insp-value text-accent" id="inspToCyl">Pending</span>
+                  </div>
+                  <div class="insp-stat">
+                    <span class="insp-label">Seek Distance</span>
+                    <span class="insp-value" id="inspDistance">0 cyl</span>
+                  </div>
+                  <div class="insp-stat">
+                    <span class="insp-label">Cumulative Traveled</span>
+                    <span class="insp-value" id="inspCumulative">0 cyl</span>
+                  </div>
+                  <div class="insp-stat">
+                    <span class="insp-label">Pending Requests</span>
+                    <span class="insp-value" id="inspPendingCount">8 remaining</span>
+                  </div>
+                  <div class="insp-stat">
+                    <span class="insp-label">Seek Equation</span>
+                    <span class="insp-value code-font" id="inspFormula">|to - from| = d</span>
+                  </div>
+                </div>
+
+                <!-- SSTF Candidates Breakdown Box -->
+                <div class="insp-candidates-container hidden" id="inspCandidatesBox">
+                  <span class="candidates-title">SSTF Candidate Distances from Head:</span>
+                  <div class="candidates-chips" id="inspCandidatesChips"></div>
+                </div>
+
+                <div class="insp-reasoning-box">
+                  <span class="reason-label">Decision Rationale:</span>
+                  <p class="reason-text" id="inspReasonText">Simulation initialized. Press Play to animate head traversal or use Step Next to advance step by step.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Column: CD-Like Platter Canvas & Animation Playback -->
+          <div class="lab-visualization-panel">
+            <div class="visualization-card">
+              <!-- Visualizer Header & View Mode Switcher -->
+              <div class="viz-header">
+                <div class="viz-title-group">
+                  <span class="viz-eyebrow">Physical Disk Metaphor</span>
+                  <h3 class="viz-heading" id="vizActiveAlgorithmName">Comparative Platter View</h3>
+                </div>
+                <div class="viz-tabs" id="platterViewTabs" role="tablist">
+                  <button type="button" class="viz-tab-btn active" data-tab="active" role="tab" aria-selected="true">Primary Platter</button>
+                  <button type="button" class="viz-tab-btn" data-tab="dual" role="tab" aria-selected="false">Side-by-Side Platters</button>
+                </div>
+              </div>
+
+              <!-- Main Single Platter Container -->
+              <div class="platter-viewport" id="singlePlatterContainer">
+                <!-- Platter visualizer injected here via visualization.js -->
+              </div>
+
+              <!-- Side-by-Side Dual Platter Viewport (Visible when Dual view active) -->
+              <div class="dual-platter-viewport hidden" id="dualPlatterContainer">
+                <div class="dual-col">
+                  <div class="dual-col-header">
+                    <span class="dual-badge badge-fcfs">FCFS Platter</span>
+                    <span class="dual-metric" id="dualFcfsDist">640 cyl</span>
+                  </div>
+                  <div class="dual-svg-wrapper" id="dualFcfsPlatter"></div>
+                </div>
+                <div class="dual-col">
+                  <div class="dual-col-header">
+                    <span class="dual-badge badge-sstf">SSTF Platter</span>
+                    <span class="dual-metric" id="dualSstfDist">236 cyl</span>
+                  </div>
+                  <div class="dual-svg-wrapper" id="dualSstfPlatter"></div>
+                </div>
+              </div>
+
+              <!-- Synchronized Horizontal Linear Cylinder Track (Logical 1D View) -->
+              <div class="linear-track-wrapper" role="region" aria-label="Synchronized Linear Cylinder Track">
+                <div class="linear-track-header">
+                  <div class="linear-track-title-group">
+                    <span class="linear-track-title">Synchronized Linear Cylinder Track</span>
+                    <span class="linear-track-subtitle">Logical 1D Cylinder Space [0 &ndash; <span id="linearMaxCyl">199</span>]</span>
+                  </div>
+                  <span class="linear-track-status" id="linearTrackStatus">Head at Cylinder 53 &bull; Ready</span>
+                </div>
+                <div class="linear-track-rail-container">
+                  <div class="linear-track-bar" id="linearTrackBar">
+                    <!-- Seek trail connecting visited points -->
+                    <div class="linear-track-trail" id="linearTrackTrail"></div>
+                    <!-- Moving Head Marker -->
+                    <div class="linear-track-head-marker" id="linearHeadMarker" style="left: 26.5%;">
+                      <span class="head-marker-pin"></span>
+                      <span class="head-marker-label" id="linearHeadMarkerLabel">Head: 53</span>
+                    </div>
+                    <!-- Request pins layer injected dynamically -->
+                    <div class="linear-track-pins-layer" id="linearPinsLayer"></div>
+                  </div>
+                  <div class="linear-track-scale" id="linearTrackScale">
+                    <span>0</span>
+                    <span>50</span>
+                    <span>100</span>
+                    <span>150</span>
+                    <span>199</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Interactive Legend -->
+              <div class="platter-legend" role="note" aria-label="Platter Map Legend">
+                <div class="legend-item">
+                  <span class="legend-dot dot-start"></span>
+                  <span>Initial Head</span>
+                </div>
+                <div class="legend-item">
+                  <span class="legend-dot dot-active"></span>
+                  <span>Active Target</span>
+                </div>
+                <div class="legend-item">
+                  <span class="legend-dot dot-done"></span>
+                  <span>Serviced</span>
+                </div>
+                <div class="legend-item">
+                  <span class="legend-dot dot-pending"></span>
+                  <span>Pending</span>
+                </div>
+                <div class="legend-item">
+                  <span class="legend-line line-seek"></span>
+                  <span>Seek Path</span>
+                </div>
+                <div class="legend-item">
+                  <span class="legend-dot dot-spinning"></span>
+                  <span>Platter Rotation</span>
+                </div>
+              </div>
+
+              <!-- Playback Controls Bar -->
+              <div class="playback-controls-bar" role="toolbar" aria-label="Animation Controls">
+                <div class="playback-buttons-group">
+                  <button type="button" id="btnRestart" class="ctrl-btn" title="Restart Animation" aria-label="Restart Animation">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 4v6h6M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                  </button>
+                  <button type="button" id="btnPrevStep" class="ctrl-btn" title="Previous Step" aria-label="Previous Step">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5"></line></svg>
+                  </button>
+                  <button type="button" id="btnPlayPause" class="ctrl-btn ctrl-btn-main" title="Play or Pause Simulation" aria-label="Play Simulation">
+                    <svg id="iconPlay" viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                    <svg id="iconPause" class="hidden" viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+                  </button>
+                  <button type="button" id="btnNextStep" class="ctrl-btn" title="Next Step" aria-label="Next Step">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line></svg>
+                  </button>
+                  <!-- Platter Spin Toggle Button -->
+                  <button type="button" id="btnToggleSpin" class="ctrl-btn ctrl-btn-spin active" title="Toggle Platter Spin (Pause/Resume Rotation)" aria-label="Toggle Platter Spin">
+                    <svg id="iconDiscSpin" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" class="spin-icon-svg">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <path d="M12 2a10 10 0 0 1 10 10"></path>
+                      <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                  </button>
+                </div>
+
+                <!-- Timeline Progress Bar -->
+                <div class="playback-scrubber-wrapper">
+                  <input type="range" id="timelineScrubber" min="0" max="8" value="0" step="1" aria-label="Seek timeline position" class="timeline-slider">
+                </div>
+
+                <!-- Playback Speed Multipliers -->
+                <div class="playback-speed-group" role="radiogroup" aria-label="Playback Speed">
+                  <button type="button" class="speed-btn" data-speed="0.5" role="radio" aria-checked="false">0.5&times;</button>
+                  <button type="button" class="speed-btn active" data-speed="1.0" role="radio" aria-checked="true">1&times;</button>
+                  <button type="button" class="speed-btn" data-speed="2.0" role="radio" aria-checked="false">2&times;</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Live Performance Results Panel -->
+            <div class="results-showcase-card" id="resultsCard" role="region" aria-label="Live Simulation Performance Results">
+              <div class="results-header">
+                <span class="results-eyebrow">Calculated Metrics</span>
+                <h3 class="results-title">Live Performance Analysis</h3>
+              </div>
+
+              <!-- Comparison Verdict Banner -->
+              <div class="verdict-banner" id="verdictBanner">
+                <div class="verdict-icon">
+                  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 14 14"></polyline></svg>
+                </div>
+                <div class="verdict-text">
+                  <h4 class="verdict-headline" id="verdictHeadline">SSTF reduced total head movement by 63.13%</h4>
+                  <p class="verdict-subtext" id="verdictSubtext">SSTF saved 404 cylinders of mechanical head traversal compared to FCFS.</p>
+                </div>
+              </div>
+
+              <!-- Side-by-Side Algorithm Metrics Grid -->
+              <div class="metrics-comparison-grid">
+                <!-- FCFS Metric Card -->
+                <div class="metric-card" id="fcfsResultCard">
+                  <div class="metric-card-top">
+                    <span class="algo-pill pill-fcfs">FCFS</span>
+                    <span class="metric-rank" id="fcfsRank">Baseline</span>
+                  </div>
+                  <div class="metric-stat-group">
+                    <span class="stat-caption">Total Head Movement</span>
+                    <div class="stat-number-wrapper">
+                      <span class="stat-number" id="fcfsTotalDist">640</span>
+                      <span class="stat-unit">cylinders</span>
+                    </div>
+                  </div>
+                  <div class="metric-substats">
+                    <div class="substat-col">
+                      <span class="substat-label">Average / Request:</span>
+                      <span class="substat-val" id="fcfsAvgDist">80.00 cyl</span>
+                    </div>
+                    <div class="substat-col">
+                      <span class="substat-label">Max Single Seek:</span>
+                      <span class="substat-val" id="fcfsMaxSeek">146 cyl</span>
+                    </div>
+                  </div>
+                  <div class="metric-seq-box">
+                    <span class="seq-label">Service Sequence:</span>
+                    <div class="seq-chips" id="fcfsSeqDisplay">
+                      53 &rarr; 98 &rarr; 183 &rarr; 37 &rarr; 122 &rarr; 14 &rarr; 124 &rarr; 65 &rarr; 67
+                    </div>
+                  </div>
+                </div>
+
+                <!-- SSTF Metric Card -->
+                <div class="metric-card" id="sstfResultCard">
+                  <div class="metric-card-top">
+                    <span class="algo-pill pill-sstf">SSTF</span>
+                    <span class="metric-rank rank-winner" id="sstfRank">Optimal Seek</span>
+                  </div>
+                  <div class="metric-stat-group">
+                    <span class="stat-caption">Total Head Movement</span>
+                    <div class="stat-number-wrapper">
+                      <span class="stat-number text-accent" id="sstfTotalDist">236</span>
+                      <span class="stat-unit">cylinders</span>
+                    </div>
+                  </div>
+                  <div class="metric-substats">
+                    <div class="substat-col">
+                      <span class="substat-label">Average / Request:</span>
+                      <span class="substat-val" id="sstfAvgDist">29.50 cyl</span>
+                    </div>
+                    <div class="substat-col">
+                      <span class="substat-label">Reduction vs FCFS:</span>
+                      <span class="substat-val text-success" id="sstfReductionVal">-63.13%</span>
+                    </div>
+                  </div>
+                  <div class="metric-seq-box">
+                    <span class="seq-label">Service Sequence:</span>
+                    <div class="seq-chips" id="sstfSeqDisplay">
+                      53 &rarr; 65 &rarr; 67 &rarr; 37 &rarr; 14 &rarr; 98 &rarr; 122 &rarr; 124 &rarr; 183
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Step-by-Step Movement Breakdown Table -->
+              <div class="breakdown-collapsible">
+                <button type="button" class="btn-toggle-breakdown" id="btnToggleBreakdown" aria-expanded="false">
+                  <span>View Step-by-Step Movement Math</span>
+                  <svg class="chevron-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </button>
+                <div class="breakdown-table-wrapper hidden" id="breakdownContent">
+                  <table class="data-table" aria-label="Step-by-step movement distances">
+                    <thead>
+                      <tr>
+                        <th>Step #</th>
+                        <th>FCFS Move</th>
+                        <th>FCFS Distance</th>
+                        <th>SSTF Move</th>
+                        <th>SSTF Distance</th>
+                      </tr>
+                    </thead>
+                    <tbody id="breakdownTableBody">
+                      <!-- Generated dynamically via app.js -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Technical Nuance Disclaimer -->
+              <p class="results-disclaimer">
+                <strong>Important Distinction:</strong> Cylinder movement measures physical displacement across tracks, not absolute hardware latency in milliseconds. Lower total movement does not imply that every individual request experienced lower queue waiting time; peripheral requests under SSTF may experience higher latency variance.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION E: Understand the Difference -->
+    <section id="comparison-matrix" class="comparison-section" aria-labelledby="comp-title">
+      <div class="section-container">
+        <div class="section-header text-center">
+          <span class="section-eyebrow">Direct Analysis</span>
+          <h2 id="comp-title" class="section-title">Understand the difference.</h2>
+          <p class="section-lead">
+            Evaluate how each scheduling policy trades off simplicity and predictability against mechanical efficiency.
+          </p>
+        </div>
+
+        <!-- Comparative Summary Table -->
+        <div class="table-responsive-card">
+          <table class="editorial-table" aria-label="Comprehensive Comparison between FCFS and SSTF">
+            <thead>
+              <tr>
+                <th scope="col" class="col-feature">Evaluation Dimension</th>
+                <th scope="col" class="col-fcfs">First Come, First Served (FCFS)</th>
+                <th scope="col" class="col-sstf">Shortest Seek Time First (SSTF)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">Scheduling Principle</th>
+                <td>Strict arrival order (FIFO Queue)</td>
+                <td>Greedy proximity minimization: \(\min |c - \text{head}|\)</td>
+              </tr>
+              <tr>
+                <th scope="row">Service Sequence (Current Run)</th>
+                <td id="tableFcfsSeq" class="code-font">53 &rarr; 98 &rarr; 183 &rarr; 37 &rarr; 122 &rarr; 14 &rarr; 124 &rarr; 65 &rarr; 67</td>
+                <td id="tableSstfSeq" class="code-font">53 &rarr; 65 &rarr; 67 &rarr; 37 &rarr; 14 &rarr; 98 &rarr; 122 &rarr; 124 &rarr; 183</td>
+              </tr>
+              <tr>
+                <th scope="row">Total Head Movement</th>
+                <td id="tableFcfsTotal" class="text-bold">640 cylinders</td>
+                <td id="tableSstfTotal" class="text-accent text-bold">236 cylinders</td>
+              </tr>
+              <tr>
+                <th scope="row">Average Movement / Request</th>
+                <td id="tableFcfsAvg">80.00 cylinders</td>
+                <td id="tableSstfAvg">29.50 cylinders</td>
+              </tr>
+              <tr>
+                <th scope="row">Implementation Complexity</th>
+                <td>Trivial \(O(1)\) FIFO queue operations</td>
+                <td>\(O(N)\) search per step, or balanced search tree</td>
+              </tr>
+              <tr>
+                <th scope="row">Starvation Risk</th>
+                <td><span class="badge-tag tag-safe">None (Guaranteed Service)</span></td>
+                <td><span class="badge-tag tag-warning">High for peripheral tracks</span></td>
+              </tr>
+              <tr>
+                <th scope="row">Primary Strengths</th>
+                <td>Zero starvation, deterministic fairness, trivial OS implementation.</td>
+                <td>Significantly reduced total seek distance, high aggregate throughput.</td>
+              </tr>
+              <tr>
+                <th scope="row">Key Limitations</th>
+                <td>Elevator thrashing, poor throughput under dispersed workloads.</td>
+                <td>Unfair to peripheral cylinders; high variance in individual response times.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Prominent Takeaway Banner -->
+        <div class="takeaway-banner">
+          <blockquote class="takeaway-quote">
+            "One algorithm follows arrival order. The other follows proximity. Their performance depends on the request workload."
+          </blockquote>
+          <div class="takeaway-cta">
+            <a href="#simulation-lab" class="button button-secondary">Modify Inputs & Compare Again</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION F: Behind the Logic -->
+    <section id="system-architecture" class="architecture-section" aria-labelledby="arch-title">
+      <div class="section-container">
+        <div class="section-header text-center">
+          <span class="section-eyebrow">Engineering & Logic</span>
+          <h2 id="arch-title" class="section-title">Behind the Logic</h2>
+          <p class="section-lead">
+            Inspect the underlying algorithms, verified pseudocode, and modular software architecture powering DiskLab.
+          </p>
+        </div>
+
+        <!-- Architecture Flow Diagram -->
+        <div class="arch-flow-wrapper" role="region" aria-label="System Architecture Data Flow">
+          <h3 class="arch-flow-title">Deterministic Application Pipeline</h3>
+          <div class="flow-steps-grid">
+            <div class="flow-step">
+              <span class="step-num">01</span>
+              <h4 class="step-title">Input</h4>
+              <p class="step-desc">User specifies disk size, initial head coordinate, and request queue.</p>
+            </div>
+            <div class="flow-connector">&rarr;</div>
+            <div class="flow-step">
+              <span class="step-num">02</span>
+              <h4 class="step-title">Validation</h4>
+              <p class="step-desc"><code>validation.js</code> enforces boundary conditions, syntax integrity, and edge cases.</p>
+            </div>
+            <div class="flow-connector">&rarr;</div>
+            <div class="flow-step">
+              <span class="step-num">03</span>
+              <h4 class="step-title">Algorithms</h4>
+              <p class="step-desc"><code>algorithms.js</code> runs pure, non-mutating FCFS and SSTF solvers with deterministic tie-breaks.</p>
+            </div>
+            <div class="flow-connector">&rarr;</div>
+            <div class="flow-step">
+              <span class="step-num">04</span>
+              <h4 class="step-title">Metrics</h4>
+              <p class="step-desc"><code>metrics.js</code> calculates total seeks, averages, and comparative percentage deltas.</p>
+            </div>
+            <div class="flow-connector">&rarr;</div>
+            <div class="flow-step">
+              <span class="step-num">05</span>
+              <h4 class="step-title">Visualization</h4>
+              <p class="step-desc"><code>visualization.js</code> renders high-fidelity SVG platter animations and interactive timelines.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabbed Pseudocode & Educational Explanations -->
+        <div class="pseudocode-tabs-container">
+          <div class="tabs-nav" role="tablist" aria-label="Algorithm Pseudocode Tabs">
+            <button type="button" class="tab-button active" data-target="#tabFcfs" role="tab" aria-selected="true">FCFS Logic & Pseudocode</button>
+            <button type="button" class="tab-button" data-target="#tabSstf" role="tab" aria-selected="false">SSTF Logic & Pseudocode</button>
+            <button type="button" class="tab-button" data-target="#tabModularity" role="tab" aria-selected="false">Modular Architecture Benefits</button>
+          </div>
+
+          <!-- Tab Content: FCFS -->
+          <div class="tab-panel active" id="tabFcfs" role="tabpanel">
+            <div class="code-explain-grid">
+              <div class="code-col">
+                <pre class="code-block"><code><span class="kw">algorithm</span> <span class="fn">FCFS</span>(initialHead, queue):
+    currentHead &larr; initialHead
+    totalMovement &larr; 0
+    sequence &larr; [initialHead]
+    
+    <span class="kw">for each</span> request <span class="kw">in</span> queue:
+        distance &larr; |request - currentHead|
+        totalMovement &larr; totalMovement + distance
+        sequence.append(request)
+        currentHead &larr; request
+        
+    averageMovement &larr; totalMovement / length(queue)
+    <span class="kw">return</span> sequence, totalMovement, averageMovement</code></pre>
+              </div>
+              <div class="explain-col">
+                <h4 class="col-subheading">Step-by-Step Breakdown</h4>
+                <ol class="explain-list">
+                  <li><strong>Preserve Arrival Sequence:</strong> The queue is evaluated in the exact order submitted by callers without sorting or reordering.</li>
+                  <li><strong>Consecutive Distances:</strong> At each step \(i\), calculate absolute difference \(|c_i - c_{i-1}|\).</li>
+                  <li><strong>Accumulate Seek:</strong> Sum up all individual movements to obtain total cylinder displacement.</li>
+                  <li><strong>Module Mapping:</strong> Implemented inside <code>algorithms.js &rarr; runFCFS()</code>. Zero mutation of the original array.</li>
+                </ol>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab Content: SSTF -->
+          <div class="tab-panel hidden" id="tabSstf" role="tabpanel">
+            <div class="code-explain-grid">
+              <div class="code-col">
+                <pre class="code-block"><code><span class="kw">algorithm</span> <span class="fn">SSTF</span>(initialHead, queue):
+    currentHead &larr; initialHead
+    pending &larr; copy(queue)
+    totalMovement &larr; 0
+    sequence &larr; [initialHead]
+    
+    <span class="kw">while</span> pending <span class="kw">is not empty</span>:
+        bestIndex &larr; 0
+        minDist &larr; |pending[0] - currentHead|
+        
+        <span class="kw">for</span> i <span class="kw">from</span> 1 <span class="kw">to</span> length(pending) - 1:
+            dist &larr; |pending[i] - currentHead|
+            <span class="kw">if</span> dist &lt; minDist:
+                minDist &larr; dist
+                bestIndex &larr; i
+            <span class="kw">else if</span> dist == minDist:
+                <span class="cmt">// Deterministic tie-breaker: earlier queue index wins</span>
+                <span class="kw">if</span> pending[i].originalIndex &lt; pending[bestIndex].originalIndex:
+                    bestIndex &larr; i
+                    
+        chosen &larr; pending.remove(bestIndex)
+        totalMovement &larr; totalMovement + minDist
+        sequence.append(chosen)
+        currentHead &larr; chosen
+        
+    <span class="kw">return</span> sequence, totalMovement</code></pre>
+              </div>
+              <div class="explain-col">
+                <h4 class="col-subheading">Step-by-Step Breakdown</h4>
+                <ol class="explain-list">
+                  <li><strong>Greedy Candidate Evaluation:</strong> On every iteration, inspect all remaining pending requests to find the one minimizing seek distance.</li>
+                  <li><strong>Deterministic Tie-Breaking:</strong> When two requests lie equidistant in opposite directions (e.g. at distances \(+10\) and \(-10\)), DiskLab deterministically chooses whichever request appeared earlier in the input queue.</li>
+                  <li><strong>Remove from Pending:</strong> The serviced request is removed from the pending pool, and the head advances to its position.</li>
+                  <li><strong>Module Mapping:</strong> Implemented inside <code>algorithms.js &rarr; runSSTF()</code>.</li>
+                </ol>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab Content: Modularity -->
+          <div class="tab-panel hidden" id="tabModularity" role="tabpanel">
+            <div class="modularity-summary">
+              <h4 class="col-subheading">Why Modular Architecture Matters</h4>
+              <p>
+                In production software engineering and computer science pedagogy, decoupling responsibilities creates maintainable, testable software:
+              </p>
+              <div class="modularity-cards-grid">
+                <div class="mod-card">
+                  <h5>Separation of Concerns</h5>
+                  <p>Input validation (<code>validation.js</code>) has zero coupling to SVG rendering (<code>visualization.js</code>). Business logic remains purely algorithmic.</p>
+                </div>
+                <div class="mod-card">
+                  <h5>Unit Testability</h5>
+                  <p>Pure functions in <code>algorithms.js</code> and <code>metrics.js</code> can be tested headlessly via automated CLI suites (such as <code>tests/test_runner.js</code>) without browser DOM dependencies.</p>
+                </div>
+                <div class="mod-card">
+                  <h5>Extensibility</h5>
+                  <p>Adding new disk scheduling algorithms (such as SCAN, C-SCAN, or LOOK) requires only a new function in <code>algorithms.js</code> and zero refactoring of visualization or validation pipelines.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION G: Final Takeaway -->
+    <section id="closing-takeaway" class="closing-section" aria-labelledby="closing-title">
+      <div class="section-container text-center">
+        <div class="closing-editorial-panel">
+          <!-- Minimal Platter Icon Ring -->
+          <div class="closing-icon-ring" aria-hidden="true">
+            <div class="closing-glow"></div>
+            <svg viewBox="0 0 100 100" width="80" height="80">
+              <circle cx="50" cy="50" r="46" fill="none" stroke="#1683F8" stroke-width="2" opacity="0.85"></circle>
+              <circle cx="50" cy="50" r="32" fill="none" stroke="rgba(200,142,137,0.4)" stroke-width="1.5" stroke-dasharray="3 4"></circle>
+              <circle cx="50" cy="50" r="14" fill="#202426" stroke="#B9BDC2" stroke-width="2"></circle>
+              <circle cx="50" cy="50" r="4" fill="#FAF9F5"></circle>
+            </svg>
+          </div>
+
+          <h2 id="closing-title" class="closing-headline">Scheduling is a decision about movement.</h2>
+          <p class="closing-lead">
+            FCFS values arrival order. SSTF prioritizes proximity. Understanding the trade-off is the first step toward understanding storage performance.
+          </p>
+
+          <div class="closing-actions">
+            <a href="#simulation-lab" class="button button-primary">Run another simulation</a>
+          </div>
+
+          <footer class="site-footer" role="contentinfo">
+            <div class="footer-divider"></div>
+            <p class="footer-text">
+              DiskLab &middot; Operating Systems Self-Learning Activity &middot; Traditional Disk Scheduling
+            </p>
+          </footer>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modular Scripts with graceful fallback -->
+  <script src="validation.js"></script>
+  <script src="algorithms.js"></script>
+  <script src="metrics.js"></script>
+  <script src="visualization.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
